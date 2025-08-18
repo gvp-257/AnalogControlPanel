@@ -95,22 +95,22 @@ Again, the ADC is not magic: you can't choose exactly what you want for each of 
   * **Precision or Sensitivity** Set bit depth of samples: `bitDepth8()` (readings from 0 to 255), `bitDepth10()` (readings from 0 to 1023).
 function.
 
-  * **Triggering or Starting** a reading: Single-shot or free-running mode: `singleReadingMode()`, `freeRunMode()`
+  * **Manual Triggering** a reading: Single-shot or free-running mode: `singleReadingMode()`, `freeRunMode()`
 
-  * Blocking and non-blocking reads: `readPin(pin)` (like Arduino's built in `analogRead(pin)`), `usePin(pin)` ... `read()`, `read8Bit()` (with `bitDepth8()`), and non-blocking `startReading()` ... `readingReady()`...`getLastReading()`, `getLastReading8Bit()`.
+  * **Blocking and non-blocking reads**: `readPin(pin)` (like Arduino's built in `analogRead(pin)`), `usePin(pin)` ... `read()`, `read8Bit()` (with `bitDepth8()`), and non-blocking `startReading()` ... `readingReady()`...`getLastReading()`, `getLastReading8Bit()`.
 
-  * "ADC Conversion Complete" interrupt handling: define a function to get the ADC reading as soon as it's done. `interruptOnDone()` and `noInterruptOnDone()` to enable/disable the ADC's conversion complete interrupt; `attachDoneInterruptFunction(function-name)`, `detachDoneInterruptFunction()`: set the function to be called on conversion complete.
+  * **Auto Triggering: Take samples at precise times/rates**: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2, `triggerOnInputCapture()` advanced: triggers the ADC on an input capture event on pin 8. `triggerOnTimer1CompareB()` advanced: triggers on Timer1 counter reaching specified value. You must configure the timer yourself.
 
-  * Take samples at precise times/rates: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2, `triggerOnInputCapture()` advanced: triggers the ADC on an input capture event on pin 8. `triggerOnTimer1CompareB()` advanced: triggers on Timer1 counter reaching specified value. You must configure the timer yourself.
+  * **Sleep-mode** single-shot ADC reading for lower noise from the CPU: `sleepRead()`
 
-  * Sleep-mode single-shot ADC reading for lower noise from the CPU: `sleepRead()`
+  * **"ADC Conversion Complete" interrupt handling**: define a function to get the ADC reading as soon as it's done. `interruptOnDone()` and `noInterruptOnDone()` to enable/disable the ADC's conversion complete interrupt; `attachDoneInterruptFunction(function-name)`, `detachDoneInterruptFunction()`: set the function to be called on conversion complete.
 
-  * Read the AVR's internal voltage reference, or the internal
+  * **Special Reads**: read the AVR's internal voltage reference, or the internal
 temperature sensor, or the internal ground connection in the ATmega328P: `readInternalReference()`, `readTemperature()`, `readGround()`. These are "raw" readings, 0 to 1023.
 
-  * Get an estimate of the ATmega's supply voltage - useful for battery powered projects: `getSupplyVoltage()`. Returns voltage as a floating-point number.
+  * **Suppply Voltage** Get an estimate of the ATmega's supply voltage - useful for battery powered projects: `getSupplyVoltage()`. Returns voltage as a floating-point number.
 
-  * All functions belong to InternalADC, i.e. must be prefixed with `InternalADC.`.
+  * All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.`.
 
 
 **Primary Use Case:** Battery powered Arduinos using the ATmega328P, for example the Arduino Pro Mini with power LED and voltage regulator removed, or a "Breadboard Arduino" running at 1 MHz, 8MHz, or 16 MHz.
@@ -122,27 +122,28 @@ Free-running mode and 8-bit readings can be used to implement a basic oscillosco
 
     #include "AnalogControlPanel.h"
 
-
 ## STATE: On/Off Control
 
-
     bool InternalADC.IsOff()
+    bool InternalADC.IsOn()
 
 Is the ADC enabled and is its clock running?
 
-
-    InternalADC.On()
-    InternalADC.Off()
+    InternalADC.powerOn()
+    InternalADC.powerOff()
+    InternalADC.begin()
+    InternalADC.end()
 
 Start/stop the InternalADC. Stopping it reduces current consumption by about 300 microamps while the processor is awake, which may be useful for battery powered projects that only use the ADC now and then, for example to read the battery voltage. The ADC must also be stopped before going into power-off sleep, or it will continue to consume current.
 
 
 ## SCALE: Voltage Reference for Max Input Voltage
 
-
     InternalADC.referenceDefault()     // Arduino default, default after powerOn() or begin().
     InternalADC.referenceInternal()    // Arduino's INTERNAL. 1100 millvolts nominal
     InternalADC.referenceExternal()    // If you know what you are doing.
+
+    InternalADC.reference(REF)         // REF is one of DEFAULT, INTERNAL, EXTERNAL.
 
 Set the ADC's reference "full scale" voltage for readings (equal to a reading
 of 1024, if the ADC could output a number bigger than 1023 in 10-bit mode).
@@ -150,15 +151,15 @@ of 1024, if the ADC could output a number bigger than 1023 in 10-bit mode).
 `referenceDefault()` is the chip's supply voltage on the AVCC pin. It can vary quite a bit, especially on batteries.
 
 `referenceInternal()` is an internal circuit with a nominal voltage of 1.100 V,
-plus or minus 10%. See readInternalReference() below to measure it on each chip.
+plus or minus 10%. A bit more stable than batteries. See readInternalReference() below to measure it on each chip.
 
 The ATmega turns off its internal reference when not in use, so after selecting
 it, wait 70 microseconds for it to stabilise. Or do other things taking that
 long, like reading a real-time clock module over I2C.
 
-To specify the internal reference's exact voltage after measuring it, use
+To specify the internal reference's exact voltage in your sketches after measuring it, use
 
-    InternalADC.setInternalReferenceVoltage(1.094); // will be remembered.
+    InternalADC.setInternalReferenceVoltage(1.094); // will be remembered for that sketch.
 
 The default value is 1.100 (1.1 volts).
 
