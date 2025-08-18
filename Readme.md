@@ -10,15 +10,15 @@ I'm going to assume you're familiar with Arduino's `analogRead` functions but wa
 
 Note: `Analog Control Panel` is all about reading analog inputs. It has no functionality for analogWrite().
 
-### What Happens in an `analogRead()`?
+### What Happens in `analogRead()`?
 
 Inside every chip that can do an `analogRead()` there is a specialised circuit module called an "analog to digital converter", ADC for short.
 
-The ADC's job is to convert the voltage on a pin to a number that the chip's CPU can process and store in memory. That's what's happening inside `analogRead()`. Analog Control Panel controls this internal inside-the-chip ADC.
+The ADC's job is to convert the voltage on a pin to a number that the chip's CPU can process and store in memory. That's what's happening inside `analogRead()`. Analog Control Panel controls this internal ADC module in the ATmega328P chip used by the Uno, Nano, and Pro Mini.
 
-You can use Analog Control Panel pretty much the same way as `analogRead()` if you want. Just prefix your function calls with `InternalADC.`, and replace `analogRead(pin)` with `readPin(pin)`.
+You can use Analog Control Panel pretty much the same way as `analogRead()` if you want. Just prefix your function calls with "`InternalADC.`", and replace `analogRead(pin)` with `readPin(pin)`.
 
-### Analog Control Panel Basics
+## Analog Control Panel Basics
 
     #include "AnalogControlPanel.h" // All functions belong to the `InternalADC` object.
 
