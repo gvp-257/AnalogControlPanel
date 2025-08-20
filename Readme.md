@@ -1,30 +1,34 @@
 # ANALOG CONTROL PANEL
 
-`analogRead()`.....
+Under the covers of `analogRead()`.
 
-Arduino is great at keeping things simple, but sometimes you want more control. Analog Control Panel allows you to have full control of analog readings on the Uno, Nano, and Pro Mini, and "breadboard arduinos" based on the ATmega328P chip. Science and engineering projects, especially, may have a need for precise control of analog readings.
+Arduino is great at keeping things simple. But after a while you might want more control. Analog Control Panel gives you full control of analog readings.
 
-For an example, imagine a battery powered environmental data logger using the Arduino Pro Mini, in which precise timing of readings is desired while power consumption is minimised because you want the batteries to last for a year.
+**Note:** Analog Control Panel is all about configuring analog reads. It has no functionality for `analogWrite()`.
 
-I'm going to assume you're familiar with Arduino's `analogRead` functions but want to know more and do more. If the next section is confusing, refer to the Arduino documentation for `analogRead`.
+### Compatibility
 
-Note: `Analog Control Panel` is all about reading analog inputs. It has no functionality for analogWrite().
+Analog Control Panel is compatible with Arduino boards based on the AVR ATmega328P microcontroller: the Uno, Nano, and Pro Mini (bot 5 volt and 3 volt versions). It will also work with "breadboard Arduinos" using the ATmega328P running at 16 MHz, 8MHz, or 1MHz.
 
 ### What Happens in `analogRead()`?
 
-Inside every chip that can do an `analogRead()` there is a specialised circuit module called an "analog to digital converter", ADC for short.
+I'm going to assume you're familiar with using Arduino's `analogRead` function and its supporting function `analogReference`, but want to know more and do more. If the next section is confusing, refer to the [Arduino documentation for `analogRead`](https://docs.arduino.cc/language-reference/en/functions/analog-io/analogRead/).
+
+Inside every chip that can do an `analogRead()` there is a specialised circuit module called an "analog to digital converter", ADC.
 
 The ADC's job is to convert the voltage on a pin to a number that the chip's CPU can process and store in memory. That's what's happening inside `analogRead()`. Analog Control Panel controls this internal ADC module in the ATmega328P chip used by the Uno, Nano, and Pro Mini.
 
-You can use Analog Control Panel pretty much the same way as `analogRead()` if you want. Just prefix your function calls with "`InternalADC.`", and replace `analogRead(pin)` with `readPin(pin)`.
+You can use Analog Control Panel pretty much the same way as `analogRead()` if you want. Just prefix your function calls with "`InternalADC.`":-
 
 ## Analog Control Panel Basics
 
-    #include "AnalogControlPanel.h" // All functions belong to the `InternalADC` object.
+    #include "AnalogControlPanel.h"
 
-    InternalADC.begin();     // optional: InternalADC.readPin() will do it if needed.
+    // All functions belong to the `InternalADC` object.
 
-    int reading = InternalADC.readPin(A3); // same as Arduino's "analogRead(A3);"
+    InternalADC.begin();     // optional: InternalADC.analogRead() will do it if needed.
+
+    int reading = InternalADC.analogRead(A3); // same as Arduino's "analogRead(A3);"
 
     InternalADC.end();       // turn off the InternalADC, save batteries.
 
@@ -36,25 +40,26 @@ also:-
     // 8-bit readings that fit in a byte. Values 0 to 255:-
 
     InternalADC.readResolution(8);
-    byte smallreading = InternalADC.readPin(A4);
+    byte smallreading = InternalADC.analogRead(A4);
 
     InternalADC.readResolution(10);     // back to readings in 0..1023 range
 
-    InternalADC.reference(INTERNAL); // also: DEFAULT, EXTERNAL:
+    InternalADC.reference(INTERNAL); // other values: DEFAULT, EXTERNAL
     // as in Arduino's analogReference(). See that documentation for details.
 
     int refReading = InternalADC.readInternalReference();
-    // With reference(INTERNAL): gives  about 1020.
+    // With reference(INTERNAL): gives around 1020. (should be 1023.)
     // With reference(DEFAULT) on an Uno, about 225.
 
-    float battVoltage = InternalADC.getSupplyVoltage(); // for Uno, somewhere around 5.00
+    float batteryVoltage = InternalADC.getSupplyVoltage();
+    // For Uno, is near 5.00. More useful for unregulated, battery powered projects.
 
 
-So you can use it as a variation of Arduino's `analogRead()` with a few bells and whistles if you want.
+So you can use Analog Control Panel and `InternalADC.analogRead()` just like Arduino's `analogRead()`, with a few bells and whistles, if you want.
 
-Read on if you want more.
+There is more, however. Before we get into that, we'll need to cover a bit of background and introduce some terminology.
 
-## THE ADC, AND CHOICES
+## WHAT DO THE CONTROL KNOBS CONTROL?
 
 The ADC is not magic. It takes time to do its job, and it can't measure infinite voltages or measure them infinitely precisely - numbers that big would fill up the Arduino's memory, anyway.
 
@@ -66,7 +71,7 @@ Over time, the choices have been grouped into seven questions:-
  2. (Scale or Reference) What is the maximum voltage you want to be able to read? The largest number the ADC can give you is 1023, but what does 1023 mean? -- 5 volts, or 1.1 volts?
  3. (Speed) How fast do you want to take a reading? Mostly, fast is good. But for a given design of hardware, beyond a certain point, faster means less accurate: greater likelihood of the answer being wrong, not just imprecise.
  4. (Precision or Resolution or Bit Depth) How precise do the results have to be? There's a tradeoff here: longer numbers can hold more precise results, but they take more space in memory. Also, quite often extra precision is an illusion, because of fluctuations in the sensor you're reading. The ADC can't provide better data than its source.
- 5. (Triggering) When do you want to take the reading--what triggers a reading? Your code, when you write `InternalADC.startReading();` or `InternalADC.readPin(A3);`? Or, say, do you want to take a reading _exactly_ when a pulse is received or some other event happens--"trigger on event" mode.
+ 5. (Triggering) When do you want to take the reading--what triggers a reading? Your code, when you write `InternalADC.startReading();` or `InternalADC.analogRead(A3);`? Or, say, do you want to take a reading _exactly_ when a pulse is received or some other event happens--"trigger on event" mode.
  6. (Notification) Do you want to wait around for the ADC while it does its work, or have you got other things to do? (The ADC takes between 13 and 110 microseconds for each reading. 110 microseconds equals 1,760 CPU clock cycles, enough for some arithmetic and array access.) With `analogRead()`, you wait. If you want to work, then when it's convenient, you can check a flag to tell you whether the ADC is finished and your reading is ready.
  7. (State) Turning the ADC off and on. In Arduino, of course, it's always on. You might prefer to save your batteries for other things.
 
@@ -74,12 +79,14 @@ Some people like to change a few names and call these the seven 'S'es of ADCs: *
 
 In Arduino you get to choose Scale with the `analogReference(...)` function, and the Source by specifying the pin in `analogRead(...)`: `analogRead(LDR_PIN)`.
 
-For the other aspects: there is one speed, on an Uno there is one precision (0 to 1023 in an `int`), the ADC starts when your code says `analogRead()` the first time, and then it's on permanently, you get one speed, and you have to wait for the ADC every time.
+For the other aspects: there is one speed, on an Uno there is one precision (0 to 1023 in an `int`), the ADC starts when your code says `analogRead()` the first time, and then it's on permanently, you get one speed, and you have to wait for the ADC every time. Analog Control Panel lets you choose.
 
-Would you like to have more control?
+The bad news is that you can't choose anything you want for each of these things. You can only choose from the options that the hardware designers gave us.  Still, at least you can get some choice.
 
-Again, the ADC is not magic: you can't choose exactly what you want for each of these things. You can only choose from the options that the hardware designers gave us.  Still, at least you can get some choice.
+With those concepts covered, we can look at the functions in Analog Control Panel. First up we'll list them according to the seven S categories.
 
+Bur first of all, an interlude. Here's a picture of a cat:-
+![Photo of a cat, public domain](cat-publicdomain.jpg)
 
 
 ## ANALOG CONTROL PANEL SUMMARY
@@ -95,11 +102,11 @@ Again, the ADC is not magic: you can't choose exactly what you want for each of 
   * **Precision or Sensitivity** Set bit depth of samples: `bitDepth8()` (readings from 0 to 255), `bitDepth10()` (readings from 0 to 1023).
 function.
 
-  * **Manual Triggering** a reading: Single-shot or free-running mode: `singleReadingMode()`, `freeRunMode()`
+  * **Starting** readings **manually**: Single-shot or free-running mode: `singleReadingMode()`, `freeRunMode()`
 
-  * **Blocking and non-blocking reads**: `readPin(pin)` (like Arduino's built in `analogRead(pin)`), `usePin(pin)` ... `read()`, `read8Bit()` (with `bitDepth8()`), and non-blocking `startReading()` ... `readingReady()`...`getLastReading()`, `getLastReading8Bit()`.
+  * **Starting automatically**,  auto-triggering: Take samples at precise times/rates**: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2. `triggerOnInputCapture()`: advanced, triggers the ADC on an input capture event on pin 8. Theres no way to set that up in the core Arduino language. Similarly for `triggerOnTimer1CompareB()`: triggers on the internal Timer1 hardware reaching a specified value. You must configure the timer yourself.
 
-  * **Auto Triggering: Take samples at precise times/rates**: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2, `triggerOnInputCapture()` advanced: triggers the ADC on an input capture event on pin 8. `triggerOnTimer1CompareB()` advanced: triggers on Timer1 counter reaching specified value. You must configure the timer yourself.
+  * **Signalling** or **Notification**: **Blocking reads**: `analogRead(pin)` (like Arduino's built in `analogRead(pin)`), `usePin(pin)` ... `read()`, `read8Bit()` (with `bitDepth8()`). **Non-blocking reads**: the cycle `startReading()` ... `readingReady()`...`getLastReading()` or `getLastReading8Bit()`.
 
   * **Sleep-mode** single-shot ADC reading for lower noise from the CPU: `sleepRead()`
 
@@ -110,15 +117,9 @@ temperature sensor, or the internal ground connection in the ATmega328P: `readIn
 
   * **Suppply Voltage** Get an estimate of the ATmega's supply voltage - useful for battery powered projects: `getSupplyVoltage()`. Returns voltage as a floating-point number.
 
-  * All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.`.
+All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.`.
 
-
-**Primary Use Case:** Battery powered Arduinos using the ATmega328P, for example the Arduino Pro Mini with power LED and voltage regulator removed, or a "Breadboard Arduino" running at 1 MHz, 8MHz, or 16 MHz.
-
-Free-running mode and 8-bit readings can be used to implement a basic oscilloscope for signals up to 18000 Hz.
-
-
-# USAGE
+# USAGE REFERENCE
 
     #include "AnalogControlPanel.h"
 
@@ -352,7 +353,7 @@ is finished. (27ish microseconds if speed4x() is used before `read()`,
 108ish microseconds with `speed1x()`.)
 
 
-    int InternalADC.readPin(const uint8_t pin)
+    int InternalADC.analogRead(const uint8_t pin)
 
 This corresponds to Arduino's analogRead(pin) function.
 

@@ -1,9 +1,10 @@
-# Syntax Coloring Map For AnalogPro
+# Syntax Coloring Map For Analog Control Panel
 
 # Datatypes (KEYWORD1)
 
 # Methods and Functions (KEYWORD2)
 
+analogRead	KEYWORD2
 
 attachDoneInterruptFunction	KEYWORD2
 
@@ -57,8 +58,6 @@ readGround	KEYWORD2
 readInternalReference	KEYWORD2
 readTempSensor	KEYWORD2
 
-readPin	KEYWORD2
-
 readResolution	KEYWORD2
 
 readingReady	KEYWORD2
@@ -99,4 +98,3 @@ InternalADC	KEYWORD2
 
 # Constants (LITERAL1)
 
-AVR_INTERNAL_REFERENCE_1V1	LITERAL1

@@ -398,7 +398,7 @@ uint8_t _M328P_ADC::getLastReading8Bit() {return ADCH;}
     */
 
 // Like Arduino's analogRead() function.
-int _M328P_ADC::readPin(const uint8_t pin)
+int _M328P_ADC::analogRead(const uint8_t pin)
 {
     uint8_t oldADCSRA = ADCSRA, oldADMUX  = ADMUX;
     bool wasOff = isOff();
@@ -544,3 +544,5 @@ float _M328P_ADC::getSupplyVoltage()
     if (rdg == 0) return 0;
     return (bandgapV * 1023.0 / (float)rdg);
 }
+
+struct _M328P_ADC InternalADC;

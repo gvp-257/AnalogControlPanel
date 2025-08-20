@@ -171,7 +171,7 @@ public:
     // 1. BLOCKING READS.
     // These wait for the ADC to finish, can't do anything meanwhile.
 
-    int     readPin(const uint8_t pin); // Like Arduino's analogRead(pin).
+    int     analogRead(const uint8_t pin); // Like Arduino's analogRead(pin).
 
 
     // Use 'usePin(pin)' before using read(), read8Bit(), or sleepRead().
