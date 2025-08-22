@@ -101,7 +101,7 @@ Here's a picture of a cat:-
 
 All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.` ("Internal"..? There are many libraries for external ADC modules that one can buy for more advanced needs. This library is for the built-in ADC.)
 
-  * **State**: `isOff()`, `isOn()`, `powerOn()`, `powerOff()`; or more Arduino-ish: `begin()`, `end()`.
+  * **State**: `isOff()`, `isOn()`, `powerOn()`, `powerOff()`; or more Arduino-ish: `begin()`, `end()`, `saveSettings()`, `restoreSettings()`.
 
   * **Source** Input Pin selection that is decoupled from taking readings: `usePin(pin)`, `freePin(pin)`. After `usePin()`, readings via `InternalADC.read()` and auto-triggered readings will use that pin.
 
@@ -112,7 +112,7 @@ All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC
   * **Precision or Sensitivity**: Set the bit depth of samples: `bitDepth8()` (readings from 0 to 255), `bitDepth10()` (readings from 0 to 1023). There is also `readResolution(8)`, `readResolution(10)` since Arduino has a similar function that can be used on other boards.
 
 
-  * **Starting** readings. First, **manually**: Single-shot or free-running mode: `singleReadingMode()`, `freeRunMode()`
+  * **Starting** readings. First, **manually**: Single-shot or free-running mode: `singleReadingMode()`, `freeRunningMode()`
 
   * **Starting automatically**,  auto-triggering, take samples at precise times/rates: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2. `triggerOnInputCapture()`: advanced, triggers the ADC on an input capture event on pin 8. There's no way to set that up in the core Arduino language, but there might be a library. Similarly for `triggerOnTimer1CompareB()`: triggers on the internal Timer1 hardware reaching a specified value. You must configure the timer yourself.
 
@@ -133,7 +133,7 @@ All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC
 
     #include "AnalogControlPanel.h"
 
-## STATE: On/Off Control
+## STATE: On/Off Control, Save/Restore Settings
 
     bool InternalADC.isOff()
     bool InternalADC.isOn()
@@ -146,6 +146,12 @@ Is the ADC enabled and is its clock running?
     InternalADC.end()
 
 Start and stop the InternalADC. Stopping it reduces current consumption by about 300 microamps while the processor is awake, which may be useful for battery powered projects that only use the ADC now and then, for example to read the battery voltage. The ADC must also be stopped before going into power-off sleep, or it will continue to consume current.
+
+
+    InternalADCSettings adcsettings = InternalADC.saveSettings();
+    InternalADC.restoreSettings(adcsettings)
+
+Save the ADC's settings in a variable `settings` of type `InternalADCSettings`, and then restore the ADC to use those settings.
 
 
 ## SCALE: Voltage Reference for Max Input Voltage
@@ -310,7 +316,7 @@ NOTE: A4 and A5 are used digitally for Wire (the built-in I2C peripheral).
 
 You probably want to skip this section on a first read.
 
-This may be useful when using the 'auto' modes  (freeRunMode, triggerOnInterrupt0, etc.).
+This may be useful when using the 'auto' modes  (freeRunningMode, triggerOnInterrupt0, etc.).
 
     InternalADC.interruptOnADCDone()
     InternalADC.noInterruptOnADCDone()
@@ -442,7 +448,7 @@ Just carry on with other stuff, and `getLastReading()` whenever you want:-
         InternalADC.speed4x();
         InternalADC.bitDepth8();        // only want 8-bit values.
         InternalADC.usePin(SENSORPIN);
-        InternalADC.freeRunMode();      // ADC triggers itself once started.
+        InternalADC.freeRunningMode();      // ADC triggers itself once started.
         InternalADC.startReading();     // Trigger the first sample.
         delayMicroseconds(54);          // First sample takes double time.
     }

@@ -1,297 +1,242 @@
 #include <Arduino.h>
 /*
- Test Reading Scatter (Variation from one read to the next)
+ Test Reading Scatter 
+ (variation in the result between readings of the same thing)
 
- Test the "scatter" in repeated readings of the same pin. 
+ https://github.com/gvp-257/AnalogControlPanel example.
+
+ Circuit:  see the Test-schematic.png alongside this sketch.
+ A resistive voltage divider stabilised with a capacitor, connected
+ to analog pin A3. Arrange for the junction to be below 1.1V so that
+ the internal reference can be tested also.
+
+ See notes in the Readme.md alongside this sketch.
+
+ The method is:
  First get an "average" reading. Then for 100 readings, see how 
  much each reading differs from the average, and count the number in 
  each group - same, off by +1, off by -1, etc.
 
- High scatter may indicate a problem with your power supply being unstable.
- Battery power should give good results with very little scatter.
+ Print the results and calculate a weighted score.
 
- For this test you need two resistors of 1K or more in series from 5V to ground,
- with the junction connected to pin A3 (or whatever analog pin you would
- like to use).
+ At the end print the results for all the variables.
 
-                    +-------------|Pin A3|
-                    |                  
-   |5V|---| R1 |----+----| R2 |-----|GND|
+ Variables:   Speed (sample rate): 1x, 2x, 4x.
+                Voltage reference: Default (supply), Internal Ref.
+                   reading method: read(), sleepRead(), free-running.
 
 */
 
 #include "AnalogControlPanel.h"
 
-#include "SendOnlySerial.h" // Has printReg, printVal macros.
+#include "SendOnlySerial.h" // Lightweight serial for output only. 
+// Has printVar macro. https://github.com/gvp-257/SendOnlySerial
 
 
+
+const int numReadMethods = 3;   // read, sleepRead, freeRunning
+const int numSpeeds = 3;        // speed1x, speed2x, speed4x
+const int numVrefs = 2;         // default, internal.
+
+const bool printDetails = false; // print the counts for each 'bin' in the test?
+
+
+// Convenience macro to define strings stored in flash memory, labels for numbers:-
 #define LABEL(x, y) static const char x[] PROGMEM = y; 
 
-LABEL(r9klbl,  "\tRate 9k");
-LABEL(r18klbl, "\tRate 18k");
-LABEL(r37klbl, "\tRate 37k");
+LABEL(defaultReferenceLabel,  "Supply as voltage reference");
+LABEL(internalReferenceLabel, "Internal voltage reference ");
 
-LABEL(intReflbl, "Using internal voltage reference ");
-LABEL(dftReflbl, "Using Supply as voltage reference ");
+const char * referencelabels[numVrefs] = {defaultReferenceLabel, internalReferenceLabel};
 
-void printRegisters(void)
+LABEL(methodread, "read()\t");
+LABEL(methodsleepread, "sleepRd\t");
+LABEL(methodfreerun, "freerun\t");
+
+const char * methodlabels[numReadMethods] = {methodread, methodsleepread, methodfreerun};
+
+LABEL(speed1xLabel, "speed1x");
+LABEL(speed2xLabel, "speed2x");
+LABEL(speed4xLabel, "speed4x");
+
+const char * speedlabels[numSpeeds] = {speed1xLabel, speed2xLabel, speed4xLabel};
+
+
+// Labels for detail print, counts of each 'bin'.
+LABEL(readScatterLabel,      "read() scatter: count by difference from average");
+LABEL(sleepReadScatterLabel, "sleepRead() scatter");
+LABEL(freeRunScatterLabel,   "free-running read scatter");
+
+const char * methodbinsheading[numReadMethods] =
+  {readScatterLabel, sleepReadScatterLabel, freeRunScatterLabel};
+
+LABEL(columnsLabel, "count\t-4\t-3\t-2\t-1\t0\t+1\t+2\t+3\t+4+\n");
+
+
+// Summary Table labels:
+LABEL(summaryheader,"Summary tables of scatter scores (lower is better)");
+LABEL(tableheader,"Method-speed \t1x\t2x\t4x")
+
+//==============================================================================
+// Testing function: test the selected read method at the selected speed
+// print the test details if requested.
+
+int testReadScatter(const int selectedMethod, const int selectedSpeed, const bool printDetail)
 {
-  printReg(ADCSRA);
-  printReg(ADCSRB);
-  printReg(ADMUX);
-  SendOnlySerial.println();
-}
+  // Do lots of reads to see how much they vary from "average".
+  // Returns a scatter score from 0 up. Lower is better.
 
-void PrintResults(const char* rdglabel, const int rdg)
-{
-  SendOnlySerial.printP(rdglabel);
-  SendOnlySerial.println(rdg);
-  SendOnlySerial.println();
-}
+  if (selectedSpeed == 0) {InternalADC.speed1x();}
+  if (selectedSpeed == 1) {InternalADC.speed2x();}
+  if (selectedSpeed == 2) {InternalADC.speed4x();}
 
-void PrintTestTime(const char * ratelabel, long time)
-{
-  SendOnlySerial.printlnP(ratelabel);
-  LABEL(timingtext, "Time taken (microseconds): ");
-  SendOnlySerial.printP(timingtext);
-  SendOnlySerial.println((time));
-  SendOnlySerial.flush();
-}
-
-void PrintTimedResults(const char* rdglabel, const int rdg, const char* ratelabel, long testtime)
-{
-  PrintResults(rdglabel, rdg);
-  PrintTestTime(ratelabel, testtime);
-  SendOnlySerial.flush();
-}
-
-
-void timedtestRead(const char* testlabel, const char* ratelabel)
-{
-  long timetaken;
-  timetaken = micros();
-  int reading = InternalADC.read();
-  timetaken = micros() - timetaken;
-  PrintTimedResults(testlabel, reading, ratelabel, timetaken);
-  SendOnlySerial.println();
-  SendOnlySerial.flush();
-}
-
-void testSample(const char* testlabel, const char* ratelabel)
-{
-  InternalADC.startReading();
-  while (!InternalADC.readingReady());
-  int reading = InternalADC.getLastReading();
-  PrintResults(testlabel, reading);
-  SendOnlySerial.printP(ratelabel);
-  SendOnlySerial.flush();
-}
-
-void timedtestSample(const char* testlabel, const char* ratelabel)
-{
-  long timetaken;
-  timetaken = micros();
-  InternalADC.startReading();
-  while (!InternalADC.readingReady());
-  int reading = InternalADC.getLastReading();
-  timetaken = micros() - timetaken;
-  PrintTimedResults(testlabel, reading, ratelabel, timetaken);
-  SendOnlySerial.flush();
-}
-
-void binstestRead(void)
-{
-  printRegisters();
-
-  //First get an "average reading"
+  //First get an "average reading".
   long sum = 0;
-  for (short i = 0; i < 16; i++) sum +=(long) InternalADC.read();
-  int av = (int)((sum + 8) / 16);
+  if (selectedMethod == 0) 
+  {
+    InternalADC.singleReadingMode();
+    for (short i = 0; i < 16; i++) {sum +=(long)InternalADC.read();}
+  }
+  if (selectedMethod == 1)
+  {
+    InternalADC.singleReadingMode();
+    for (short i = 0; i < 16; i++) {sum +=(long)InternalADC.sleepRead();}
+  }
+  if (selectedMethod == 2)
+  {
+    InternalADC.freeRunningMode();
+    InternalADC.startReading();
+    delayMicroseconds(200);
+    for (short i = 0; i < 16; i++)
+    {
+      delayMicroseconds(120); // Allow plenty of time for ADC to get a new reading
+      sum +=(long)InternalADC.getLastReading();
+    }
+  }
 
-  printVar(sum);
-  printVar(av);
-  SendOnlySerial.flush();
-
+  int average = (int)((sum + 8) / 16);  // round the readings: add 0.5 to each.
 
   // Now 'bin' 100 readings' difference from average
-  int bins[9];  for (short i = 0; i < 9; i++) bins[i] = 0;
+  // The nine bins are:
+  // 4 or more below--3 below--2 below--1 below--==average--1 above--2 above--3 above--4 or more
+  //       0             1        2        3          4         5        6        7        8
 
-  short bin; 
+  int bins[9]; for (short i = 0; i < 9; i++) bins[i] = 0;
 
-  const short middlebin = 4;
+  short bin; const short middlebin = 4;
 
   for(short i = 0; i < 100; i++)
   {
-    _delay_us(100);
-    int diff = InternalADC.read() - av;
+    int diff = 0;
+    if (selectedMethod == 0) {diff = InternalADC.read() - average;}
+    if (selectedMethod == 1) {diff = InternalADC.sleepRead() - average;}
+    if (selectedMethod == 2) {diff = InternalADC.getLastReading() - average;}
     if (abs(diff) > 3)
     {
-      if (diff < 0) bin = 0;  // less than -3
-      else bin = 8;           // greater than +3
+      if (diff < 0) bin = 0;  // less than -3: bin 0
+      else bin = 8;           // greater than +3: bin 8
     }
-    else {bin = middlebin + diff;}
-
+    else {bin = middlebin + diff;}  // bins 1 .. 7
     (bins[bin])++;  // increment count of readings in that bin
-  } 
-  // Print out the frequency
-  // then freq distrib of differences from av:
-  LABEL(columns, "\n\ncount\t-4\t-3\t-2\t-1\t0\t+1\t+2\t+3\t+4+\n");
-  SendOnlySerial.printP(columns);
-  // SendOnlySerial.Flush();
-  for (bin = 0; bin < 9; bin++)
-    {SendOnlySerial.print('\t'); SendOnlySerial.print(bins[bin]);}
+    delayMicroseconds(120);
+  }
 
-  SendOnlySerial.println(); SendOnlySerial.flush();
-
-}
-
-void sleepReadBinsTest(void)
-{
-  printRegisters();
-
-  //First get an "average reading"
-  long sum = 0;
-  for (short i = 0; i < 16; i++) sum +=(long) InternalADC.sleepRead();
-  int av = (int)((sum + 8) / 16);
-
-  printVar(sum);
-  printVar(av);
-  SendOnlySerial.flush();
-
-
-  // Now 'bin' 100 readings' difference from average
-  int bins[9];  for (short i = 0; i < 9; i++) bins[i] = 0;
-
-  short bin; 
-
-  const short middlebin = 4;
-
-  for(short i = 0; i < 100; i++)
+  if (printDetail)
   {
-    //_delay_us(100);
-    int diff = InternalADC.sleepRead() - av;
-    if (abs(diff) > 3)
-    {
-      if (diff < 0) bin = 0;  // less than -3
-      else bin = 8;           // greater than +3
-    }
-    else {bin = middlebin + diff;}
-
-    (bins[bin])++;  // increment count of readings in that bin
-  } 
-  // Print out the frequency
-  // then freq distrib of differences from av:
-  LABEL(columns, "\n\ncount\t-4\t-3\t-2\t-1\t0\t+1\t+2\t+3\t+4+\n");
-  SendOnlySerial.printP(columns);
-  // SendOnlySerial.Flush();
-  for (bin = 0; bin < 9; bin++)
-    {SendOnlySerial.print('\t'); SendOnlySerial.print(bins[bin]);}
-
-  SendOnlySerial.println(); SendOnlySerial.flush();
-
+    // Print a line with the bin counts as described above
+    SendOnlySerial.printP(methodlabels[selectedMethod]);
+    SendOnlySerial.printlnP(speedlabels[selectedSpeed]);
+    printVar(sum); printVar(average);
+    SendOnlySerial.printlnP(methodbinsheading[selectedMethod]);
+    SendOnlySerial.printP(columnsLabel);
+    for (bin = 0; bin < 9; bin++)
+      {SendOnlySerial.print("\t "); SendOnlySerial.print(bins[bin]);}
+    SendOnlySerial.println();
+  }
+  
+  // Calculate the weighted score: sum of (count x abs(diff from av))
+  sum = 0;  // re-use sum
+  for (short i = 0; i < 9; i++)
+  {
+    int binScore = abs(i - middlebin) * bins[i];
+    sum += binScore;
+  }
+  if (printDetail)
+  {
+    SendOnlySerial.print("Score: ");
+    SendOnlySerial.println(sum);
+    SendOnlySerial.println();
+    SendOnlySerial.flush();
+  }
+  return (int)sum;
 }
+
+
+
+//==============================================================================
+
 
 void setup()
 {
-  InternalADC.powerOn(); // Necessary to set up AREF and clock
-  InternalADC.rate9k();
-
   SendOnlySerial.begin();
 
-
-  LABEL(gndlbl, "ReadGround(), value = ");
-  LABEL(BGlabel, "Internal Ref value = ");
-  LABEL(ana3lbl, "readPin(A3), value = ");
-
-  InternalADC.referenceDefault();
-  SendOnlySerial.printlnP(dftReflbl);
-
-  // Test internal ground connection
-  SendOnlySerial.printlnP(r9klbl);
-
-  InternalADC.readGround(); // discard first reading
-  int reading = InternalADC.readGround();
-  PrintResults(gndlbl, reading);
-
-  reading = InternalADC.readInternalReference();
-  PrintResults(BGlabel, reading);
-
-  reading = InternalADC.readPin(A3);
-  PrintResults(ana3lbl, reading);
-
-  InternalADC.rate37k();
-  SendOnlySerial.printlnP(r37klbl);
-
-  reading = InternalADC.readGround();
-  PrintResults(gndlbl, reading);
-
-  reading = InternalADC.readInternalReference();
-  PrintResults(BGlabel, reading);
-
-  reading = InternalADC.readPin(A3);
-  PrintResults(ana3lbl, reading);
-
-
-  // With Reference internal 1.1V
-  InternalADC.referenceInternal();
-  SendOnlySerial.printlnP(intReflbl);
-
-  InternalADC.rate9k();
-  SendOnlySerial.printlnP(r9klbl);
-
-  InternalADC.readGround(); // discard first reading
-  reading = InternalADC.readGround();
-  PrintResults(gndlbl, reading);
-  reading = InternalADC.readInternalReference();
-  PrintResults(BGlabel, reading);
-  reading = InternalADC.readPin(A3);
-  PrintResults(ana3lbl, reading);
-
-  InternalADC.rate37k();
-  SendOnlySerial.printlnP(r37klbl);
-  reading = InternalADC.readGround();
-  PrintResults(gndlbl, reading);
-
-  reading = InternalADC.readInternalReference();
-  PrintResults(BGlabel, reading);
-
-  reading = InternalADC.readPin(A3);
-  PrintResults(ana3lbl, reading);
-
-
-  // Test for variation in the readings with Read
-  InternalADC.referenceDefault();
-  SendOnlySerial.printP(dftReflbl);
-
-  InternalADC.rate9k();
-  SendOnlySerial.printlnP(r9klbl);
-
-
-  LABEL(Jitter, "\n\nVariation in InternalADC.read() - counts of readings\n");
-  SendOnlySerial.printP(Jitter);
-
+  InternalADC.powerOn(); // Necessary to set up AREF and clock
   InternalADC.usePin(A3);
-  binstestRead();
+
+  int scores[numVrefs][numReadMethods][numSpeeds];
+  int currVref, currReadMethod, currSpeed;
 
 
-  // Jitter with  Ref = internal bandgap voltage reference
+  // 1. Using ref = AVCC (supply voltage)
+  currVref = 0;
+  InternalADC.referenceDefault();
+  for (currReadMethod = 0; currReadMethod < numReadMethods; currReadMethod++)
+  {
+    for (currSpeed = 0; currSpeed < numSpeeds; currSpeed++)
+    {
+      scores[currVref][currReadMethod][currSpeed] = 
+          testReadScatter(currReadMethod, currSpeed, printDetails);
+    }
+  }
+
+  // readScatterLabel with  Ref = internal bandgap voltage reference
+  currVref = 1;
   InternalADC.referenceInternal();
-  SendOnlySerial.printP(intReflbl);
+  //Take some readings to get the reference to settle down
+  InternalADC.speed1x();
+  for (short i = 0; i < 50; i++) InternalADC.read();
 
-  binstestRead();
+  for (currReadMethod = 0; currReadMethod < numReadMethods; currReadMethod++)
+  {
+    for (currSpeed = 0; currSpeed < numSpeeds; currSpeed++)
+    {
+      scores[currVref][currReadMethod][currSpeed] = 
+          testReadScatter(currReadMethod, currSpeed, printDetails);
+    }
+  }
 
-  // Test for jitter with sleepRead
-  LABEL(SRJitter, "\n\nJitter in InternalADC.sleepRead() readings\n");
-  SendOnlySerial.printP(SRJitter);
+  // Print the scores
+  SendOnlySerial.printlnP(summaryheader); SendOnlySerial.println();
+  // table for default reference then one for internal reference
+  //   readmethod  speed1x speed2x speed4x
 
-  sleepReadBinsTest();
-
-  // printRegisters();
-
+  for ( currVref = 0; currVref < numVrefs; currVref++)
+  {
+    SendOnlySerial.printlnP(referencelabels[currVref]);
+    SendOnlySerial.printlnP(tableheader);
+    for (currReadMethod = 0; currReadMethod < numReadMethods; currReadMethod++)
+    {
+      SendOnlySerial.printP(methodlabels[currReadMethod]);
+      for (currSpeed = 0; currSpeed < numSpeeds; currSpeed++)
+      {
+        SendOnlySerial.print('\t');
+        SendOnlySerial.print(scores[currVref][currReadMethod][currSpeed]);
+      }
+      SendOnlySerial.println();
+    }
+    SendOnlySerial.println();
+  }
   SendOnlySerial.flush();
 }
 
-void loop()
-{
-
-}
+void loop() {}

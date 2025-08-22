@@ -88,6 +88,26 @@ void _M328P_ADC::bitDepth10()
     sei();
 }
 
+InternalADCSettings _M328P_ADC::saveSettings(void)
+{
+    InternalADCSettings s;
+    cli();
+    s.adcsra = ADCSRA;
+    s.adcsrb = ADCSRB;
+    s.admux  = ADMUX;
+    sei();
+    return s;
+}
+
+void _M328P_ADC::restoreSettings(InternalADCSettings s)
+{
+    cli();
+    ADMUX  = s.admux;
+    ADCSRB = s.adcsrb;
+    ADCSRA = s.adcsra;
+    sei();
+}
+
 void _M328P_ADC::readResolution(const uint8_t bits)
 {
     if (bits == 8) bitDepth8();
@@ -284,7 +304,7 @@ void _M328P_ADC::singleReadingMode()
 // The ADC still takes at least 27 microseconds per sample, though, so
 // you'll just get the same sample if you re-read sooner than that.
 
-void _M328P_ADC::freeRunMode()
+void _M328P_ADC::freeRunningMode()
 {
     ADCSRB  = 0x00;         // trigger source 0 = "ADC conversion complete".
     ADCSRA |= (1<<ADATE);   // enable autotrigger
@@ -476,7 +496,7 @@ int _M328P_ADC::sleepRead(void)
 // (triggerOnInterrupt0(), etc.)
 
 void _M328P_ADC::startReading() {_adcdone = false; ADCSRA |= (1<<ADSC);}
-// startReading() not needed except in singleShot and freeRun modes.
+// startReading() not needed except in singleShot and freeRunning modes.
 // For the others, an event (external interrupt, etc.) will start the ADC.
 
 

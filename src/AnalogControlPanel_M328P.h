@@ -22,6 +22,16 @@
 #define sei()  __asm__ __volatile__ ("sei" ::: "memory")
 #endif
 
+/*
+ * Settings object type for saveSettings() and restoreSettings(settings)
+*/
+typedef struct {
+    uint8_t adcsra;
+    uint8_t adcsrb;
+    uint8_t admux;
+}
+InternalADCSettings;
+
 /* Sections correspond to the "seven 'S'es" of using an ADC:
  *
  * STATE: on/off
@@ -44,6 +54,9 @@ public:
 
     void powerOn(void);
     void powerOff(void);
+
+    InternalADCSettings saveSettings(void);
+    void restoreSettings(InternalADCSettings);
 
 
     // SCALE: ADC VOLTAGE REFERENCE
@@ -119,7 +132,7 @@ public:
     // The ADC still takes 27 or more microseconds per sample, though, so
     // you'll just get the same sample if you re-read before it's done the next.
     // (See "When will the ADC finish? below.)
-    void freeRunMode(void);
+    void freeRunningMode(void);
 
     // Uses Timer 1's input capture flag bit
     void triggerOnInputCapture(void);
