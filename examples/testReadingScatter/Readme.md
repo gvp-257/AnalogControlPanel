@@ -36,13 +36,13 @@ With an Uno clone on USB power:
 
     Summary tables of scatter scores (lower is better)
 
-    Using Supply as voltage reference
+    Supply as voltage reference
     Method-speed     1x      2x      4x
     read()           53      59      49
     sleepR           34      16      63
     freerun          56      56      78
 
-    Using internal voltage reference
+    Internal voltage reference
     Method-speed     1x      2x      4x
     read()           13      16       8
     sleepR           38      24       1

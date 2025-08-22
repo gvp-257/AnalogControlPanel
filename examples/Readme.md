@@ -26,9 +26,30 @@ TODO Demonstrates a technique called "oversampling and decimation" to get more p
 
 ### Test Reading Scatter
 
-TODO Tests reading repeatability - does reading the same voltage always give the same answer? If not, how big are the differences?
+Tests reading repeatability - does reading the same voltage always give the same answer? If not, how big are the differences?
 
-This sketch does repeated readings on a simple resistive divider to produce a simple "stem-and-leaf plot" and a summary figure-of-merit for "reading scatter".
+This sketch does repeated readings on a simple resistive divider to produce a simple "stem-and-leaf plot" and a summary figure-of-merit for "reading scatter" for different reading methods, speeds, and voltage references. By default only the summary tables are printed.
+
+Uses [SendOnlySerial](https://github.com/gvp-257/SendOnlySerial) instead of `Serial` to report back to the Arduino serial monitor. SendOnlySerial has a couple of useful macros.
+
+Sample output (sleepR is sleepRead(), freerun is freeRunningMode with getLastReading()).
+
+With an Uno clone on USB power:
+
+    Summary tables of scatter scores (lower is better)
+
+    Supply as voltage reference
+    Method-speed     1x      2x      4x
+    read()           53      59      49
+    sleepR           34      16      63
+    freerun          56      56      78
+
+    Internal voltage reference
+    Method-speed     1x      2x      4x
+    read()           13      16       8
+    sleepR           38      24       1
+    freerun          31      27       8
+
 
 ## Calibrate ADC
 
