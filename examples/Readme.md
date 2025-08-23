@@ -2,11 +2,11 @@
 
 ### Read LDR
 
-Basic example, reading the voltage at the junction of an LDR and ordinary resistor to estimate light level.
+TODO Basic example, reading the voltage at the junction of an LDR and ordinary resistor to estimate light level.
 
 ### Read Battery
 
-Shows the readBattery() function.
+TODO Shows the `getSupplyVoltage()` and `setInternalReference()` functions. The latter allows you to correct the voltage reported by `getSupplyVoltage()`, and all the other readings you do using the internal reference.
 
 ### Measure Internal Reference
 
@@ -14,11 +14,11 @@ TODO Puts the internal reference voltage on the "AREF" pin so you can measure it
 
 ### Measure Capacitor
 
-TODO Uses the R-C time constant formula with a known resistance to estimate the value of a capacitor.
+TODO Uses the R-C time constant formula with a known resistance to estimate the value of a capacitor. Needs a resistor of known value around 10K, a small resistor of 220R to 330R (value not critical), and one or more capacitors to test.
 
-### One Pin Many Buttons
+### Multi Button Pin
 
-TODO shows how to use a resistor ladder and an analog input pin to detect which of five buttons was pressed.
+TODO shows how to use one analog input pin to detect which of five buttons was pressed. The example requires five resistors and five button switches as shown in the Readme for MultiButtonPin. The technique can be adapted for fewer buttons and maybe one more than five.
 
 ### Bit Depth 12
 
@@ -26,15 +26,17 @@ TODO Demonstrates a technique called "oversampling and decimation" to get more p
 
 ### Test Reading Scatter
 
-Tests reading repeatability - does reading the same voltage always give the same answer? If not, how big are the differences?
+Tests reading repeatability - does reading the same voltage always give the same answer? If not, how big are the differences? How are the readings "scattered"?
 
-This sketch does repeated readings on a simple resistive divider to produce a simple "stem-and-leaf plot" and a summary figure-of-merit for "reading scatter" for different reading methods, speeds, and voltage references. By default only the summary tables are printed.
+And, do different reading methods and speeds give the same level of repeatability, or different?
 
-Uses [SendOnlySerial](https://github.com/gvp-257/SendOnlySerial) instead of `Serial` to report back to the Arduino serial monitor. SendOnlySerial has a couple of useful macros.
+This sketch does repeated readings on a simple resistive divider to produce a simple "stem-and-leaf plot" and  summary tables of "figures-of-merit" for reading scatter, for three reading methods, three speeds, and two voltage references (default and internal). Requires two resistors and a capacitor, as shown in the Readme for testReadingScatter.
 
-Sample output (sleepR is sleepRead(), freerun is freeRunningMode with getLastReading()).
+By default only the summary tables are printed.
 
-With an Uno clone on USB power:
+TestReadingScatter uses [SendOnlySerial](https://github.com/gvp-257/SendOnlySerial) instead of `Serial` to report back to the Arduino serial monitor. SendOnlySerial has a couple of useful macros.
+
+Sample output (sleepR is sleepRead(), freerun is freeRunningMode with getLastReading()), with an Uno clone on USB power:
 
     Summary tables of scatter scores (lower is better)
 
@@ -53,4 +55,4 @@ With an Uno clone on USB power:
 
 ## Calibrate ADC
 
-TODO
+TODO.

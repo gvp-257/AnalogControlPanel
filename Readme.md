@@ -1,8 +1,8 @@
 # ANALOG CONTROL PANEL
 
-Arduino is great at keeping things simple, but after a while you might want more control. Analog Control Panel gives you full control of analog readings using the analog-to-digital converter (ADC) that is built in to AVR microcontrollers, the one used by `analogRead()`.
+Arduino is great at keeping things simple with `analogRead()`. But if you want more control, Analog Control Panel gives you choices.
 
-**Note:** Analog Control Panel (ACP) is all about configuring analog **reads** using the built-in ADC. It has no functionality for `analogWrite()`. There are many add-on ADC boards and libraries for them in the Arduino ecosystem. ACP can't help you with those.
+**Note:** Analog Control Panel (ACP) is all about analog **reads** using the AVR's on-chip ADC, as used by `analogRead()`. There are many add-on ADC modules and libraries for them in the Arduino ecosystem. Analog Control Panel is not for those. It also has no functionality for `analogWrite()`.
 
 ## Compatibility
 
@@ -12,15 +12,11 @@ Analog Control Panel is compatible with Arduino boards based on the AVR ATmega32
 
 On the  [Github page](https://github.co/gvp-257/AnalogControlPanel), click the green Code button, and choose download zip. Extract the zip file into the "libraries" folder inside your sketchbook folder, and rename the extracted folder from "AnalogControlPanel-main" to "AnalogControlPanel".
 
-## BACKGROUND
+## Background
 
-I'm going to assume you're familiar with using Arduino's `analogRead` function and its supporting function `analogReference`, but want to know more and do more. If the next sections are confusing, refer to the [Arduino documentation for `analogRead`](https://docs.arduino.cc/language-reference/en/functions/analog-io/analogRead/).
+I'm going to assume you're familiar with using Arduino's `analogRead()` function and its supporting function `analogReference()`, but want to know more and do more. If the next sections are confusing, refer to the [Arduino documentation for `analogRead`](https://docs.arduino.cc/language-reference/en/functions/analog-io/analogRead/).
 
-### What Happens Inside `analogRead()`?
-
-Inside every chip that can do an `analogRead()` there is a specialised circuit module called an "analog to digital converter", ADC.
-
-The ADC's job is to convert the voltage on a pin to a number that the chip's CPU can process and store in memory. That's what's happening inside `analogRead()`. Analog Control Panel controls this internal ADC module in the ATmega328P chip used by the Uno, Nano, and Pro Mini.
+Inside every chip that can do an `analogRead()` there is a specialised circuit module called an "analog to digital converter", ADC. The ADC's job is to convert the voltage on a pin to a number that the chip's CPU can process and store in memory.
 
 ## SIMPLE USAGE
 
@@ -63,7 +59,7 @@ So you can use Analog Control Panel and `InternalADC.analogRead()` just like Ard
 
 There is more, however. Before we get into that, we'll need to cover a bit of background and introduce some terminology.
 
-## WHAT DOES THE CONTROL PANEL...CONTROL?
+## ADC OPERATION - THE CHOICES
 
 The ADC is not magic. It takes time to do its job, and it can't measure infinite voltages or measure them infinitely precisely - numbers that big would fill up the Arduino's memory, anyway.
 
@@ -91,36 +87,40 @@ The bad news is that you can't choose anything you want for each of these things
 
 ### A Look Ahead
 
-With those concepts covered, we can look at the functions in Analog Control Panel. First up there is a summary, listing the functions of Analog Control Panel according to the seven S categories, then a more code-like usage reference. But first of all, an interlude. (You're probably ready for a break.)
+With those concepts covered, we can look at the functions in Analog Control Panel. First up there is a summary, listing the functions of Analog Control Panel according to the seven S categories, then a more code-like usage reference. But first of all, an intermission. Here's a picture of a cat:-
 
-Here's a picture of a cat:-
 ![Photo of a cat, public domain](cat-publicdomain.jpg)
 
 
 ## ANALOG CONTROL PANEL SUMMARY
 
-All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.` ("Internal"..? There are many libraries for external ADC modules that one can buy for more advanced needs. This library is for the built-in ADC.)
+All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC.` "Internal", because it's for the on-chip ADC module. There are many other libraries for add-on ADC modules for more advanced needs. This library is for the built-in ADC.
 
   * **State**: `isOff()`, `isOn()`, `powerOn()`, `powerOff()`; or more Arduino-ish: `begin()`, `end()`, `saveSettings()`, `restoreSettings()`.
 
-  * **Source** Input Pin selection that is decoupled from taking readings: `usePin(pin)`, `freePin(pin)`. After `usePin()`, readings via `InternalADC.read()` and auto-triggered readings will use that pin.
+  * **Source** Input Pin selection that is decoupled from taking readings: `usePin(pin)`, `freePin(pin)`. After `usePin()`, the ADC will continue to take readings from that pin. After `freePin()` you can use the pin for digital input or output.
 
-  * **Scale**: set full-scale (reference) voltage input:  `referenceDefault()` (ATmega's supply), `referenceInternal()` (ATmega's internal reference, 1.1V), `referenceExternal()` (for example, to use a TL431 or LM4040 voltage reference chip).
+  * **Scale**: set full-scale (reference) voltage input, equal to a reading of 1024, if the ADC could output a number bigger than 1023 in 10-bit mode.  `referenceDefault()`: the ATmega's supply. `referenceDefault()` can vary quite a bit, especially on batteries, and can be 'noisy' when powered by USB.
+  * `referenceExternal()`. For example, to use a TL431, LM35, or LM4040 voltage reference chip.
+  *  `referenceInternal()`: The chips internal reference, 1.1V. The ATmega turns off its internal reference when not in use, so after selecting
+it, wait 70 microseconds for it to stabilise. Or do other things taking that
+long, like reading a real-time clock module over I2C.
 
-  * **Speed**: `speed1x()`, `speed2x()`, and `speed4x()`. In ADC world speed is usually called sample rate, so there are `rate9k()` (Arduino and ACP default, the same as `speed1x()`), `rate18k()`, `rate37k()`, `rate74k()` - for both 16MHz Uno and 8 MHz Pro Mini 3.3V: sets the maximum rate at which samples can be taken, the rate at which the ADC automatically takes samples in free-running mode. Also speeds up single-shot readings.
+  * **Speed**: `speed1x()`, `speed2x()`, and `speed4x()`. In ADC world speed is usually called sample rate, so there are also `rate9k()` (Arduino and ACP default, the same as `speed1x()`), `rate18k()`, `rate37k()`, `rate74k()` - for both 16MHz Uno and 8 MHz Pro Mini 3.3V: these set the maximum rate at which samples can be taken, the rate at which the ADC automatically takes samples in free-running mode. They also set the time taken for single-shot readings.
 
-  * **Precision or Sensitivity**: Set the bit depth of samples: `bitDepth8()` (readings from 0 to 255), `bitDepth10()` (readings from 0 to 1023). There is also `readResolution(8)`, `readResolution(10)` since Arduino has a similar function that can be used on other boards.
+  * **Precision or Sensitivity**: Set the bit depth of samples: `bitDepth8()` (readings from 0 to 255), `bitDepth10()` (readings from 0 to 1023). There is also `readResolution(8)`, `readResolution(10)` since Arduino has a similarly named function that can be used on other boards.
 
+  * **Manual reading**: `singleReadingMode()`.
 
-  * **Starting** readings. First, **manually**: Single-shot or free-running mode: `singleReadingMode()`, `freeRunningMode()`
+  * **Starting** a reading: `analogRead()` sets the source, starts, waits and returns the reading. `usePin()` .. `read()` or `read8bit()`: `usePin()` sets the source, `read()` does the rest.
 
-  * **Starting automatically**,  auto-triggering, take samples at precise times/rates: `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2. `triggerOnInputCapture()`: advanced, triggers the ADC on an input capture event on pin 8. There's no way to set that up in the core Arduino language, but there might be a library. Similarly for `triggerOnTimer1CompareB()`: triggers on the internal Timer1 hardware reaching a specified value. You must configure the timer yourself.
+  * **Sleep-mode** readings `usePin()` .. `sleepRead()`: the same as `read()`, but with the CPU stopped, for lower noise from the chip itself.
 
-  * **Signalling** or **Notification**: **Blocking reads**: `analogRead(pin)` (like Arduino's built in `analogRead(pin)`), `usePin(pin)` ... `read()` or `read8Bit()` (`read8Bit()` after `bitDepth8()`).  When the function finishes you have a reading.
+  * **Non-blocking reads**: for `singleReadingMode()` (the default), use `startReading()` and then check `if (readingReady())`. If true, then use `getLastReading()` or `getLastReading8Bit()`.
 
-  * **Sleep-mode** reading for lower noise from the CPU: `sleepRead()` (The signal is: the CPU is running again, your code is executing.)
+  * **Continuous background readings**: `freeRunningMode()`.  After `startReading()`, just use `getLastReading()` when desired: there will always be one ready. If you read too quickly though, it will be the same one as last time.
 
-  * **Non-blocking reads**: use the cycle `startReading()` ... `readingReady()`: if true, the reading is done so `getLastReading()` or `getLastReading8Bit()`.
+  * **Auto-triggering**: take samples at precise times/rates. `triggerOnInterrupt0()` - use with GPS PPS pin (pulse-per-second) or other external pulse source on pin 2. `triggerOnInputCapture()`: advanced, triggers the ADC on an input capture event on pin 8. There's no way to set that up in the core Arduino language, but there might be a library. Similarly for `triggerOnTimer1CompareB()`: triggers on the internal Timer1 hardware reaching a specified value. You must configure the timer yourself.
 
   * **"ADC Conversion Complete" interrupt handling**: define a function to get the ADC reading as soon as it's done, and control when that function is used. `interruptOnDone()` and `noInterruptOnDone()` to enable/disable the interrupt; `attachDoneInterruptFunction(function-name)`, `detachDoneInterruptFunction()` to set the function to be called when the ADC has done the reading.
 
@@ -145,66 +145,45 @@ Is the ADC enabled and is its clock running?
     InternalADC.begin()
     InternalADC.end()
 
-Start and stop the InternalADC. Stopping it reduces current consumption by about 300 microamps while the processor is awake, which may be useful for battery powered projects that only use the ADC now and then, for example to read the battery voltage. The ADC must also be stopped before going into power-off sleep, or it will continue to consume current.
+Start and stop the InternalADC. Stopping it reduces current consumption by about 300 microamps while the processor is awake.
 
 
     InternalADCSettings adcsettings = InternalADC.saveSettings();
     InternalADC.restoreSettings(adcsettings)
 
-Save the ADC's settings in a variable `settings` of type `InternalADCSettings`, and then restore the ADC to use those settings.
+Save the ADC's settings in a variable `adcsettings` of type `InternalADCSettings`, and restore those settings to the ADC.
 
 
 ## SCALE: Voltage Reference for Max Input Voltage
 
-    InternalADC.referenceDefault()     // Arduino default, default after powerOn() or begin().
-    InternalADC.referenceInternal()    // Arduino's INTERNAL. 1100 millvolts nominal
-    InternalADC.referenceExternal()    // If you know what you are doing.
 
     InternalADC.reference(REF)         // REF is one of DEFAULT, INTERNAL, EXTERNAL.
+    InternalADC.referenceDefault()     // Arduino default, default after powerOn() or begin().
 
-Set the ADC's reference "full scale" voltage for readings (equal to a reading
-of 1024, if the ADC could output a number bigger than 1023 in 10-bit mode).
+    InternalADC.referenceExternal()    // If you know what you are doing.
 
-`referenceDefault()` is the chip's supply voltage on the AVCC pin. It can vary quite a bit, especially on batteries.
+    InternalADC.referenceInternal()    // Arduino's INTERNAL. 1.100V nominal
 
-`referenceInternal()` is an internal circuit with a nominal voltage of 1.100 V,
-plus or minus 10%. A bit more stable than batteries. See readInternalReference() below to measure it on each chip.
+    InternalADC.setInternalReferenceVoltage(1.094); // will be remembered for the sketch.
 
-The ATmega turns off its internal reference when not in use, so after selecting
-it, wait 70 microseconds for it to stabilise. Or do other things taking that
-long, like reading a real-time clock module over I2C.
-
-To specify the internal reference's exact voltage in your sketches after measuring it, use
-
-    InternalADC.setInternalReferenceVoltage(1.094); // will be remembered for that sketch.
-
-The default value is 1.100 (1.1 volts).
+WARNING: Any external voltage reference, for example a TL431 or LM4040, must be between 1 volt and AVCC. `referenceExternal()` is for knowledgeable circuit designers.
 
 WARNING: I have heard that some Arduino clone suppliers bridge the AREF pin to AVCC on the printed circuit board. You can only use referenceDefault() with such boards.
 
-Any external voltage reference, for example a TL431 or LM4040, must be between 1 volt and AVCC. `referenceExternal()` is for knowledgeable circuit designers.
-
-
 ## Resolution: Bit Depth Of Samples
 
-    InternalADC.bitDepth8()
-    InternalADC.bitDepth10()  // Default after On(), Arduino value.
+    InternalADC.bitDepth8()   // use with read8Bit(), getLastReading8Bit(). Return 0..255
+    InternalADC.bitDepth10()  // Default. Return 0..1023.
 
-    // also:-
-    InternalADC.readResolution(8)
-    // Allowed values: 8, 10. Like Arduino's analogReadResolution() function.
-
-8-bit depth is used with read8Bit() and getLastReading8Bit() below.
-Reading with 8-bit depth returns a value between 0 and 255.
-
-Read() and SampleValue() will return correct results, but in a 16-bit integer.
-
-10-bit depth is the default and returns a value between 0 and 1023.
+    InternalADC.readResolution(8) // same as bitDepth8(). Allowed values: 8, 10.
 
 
-## ADC SPEED
+With `bitDepth8()`, `read()` and `getLastReading()` will return correct results,  in a 16-bit integer.
 
-Speed is also referred to as Sample Rate (symbol: sa/s, samples per second).
+
+## ADC Speed
+
+Speed is also referred to as sample rate (symbol: sa/s, samples per second).
 
 Easy mode functions:-
 
@@ -215,82 +194,62 @@ Easy mode functions:-
 
 More nerdy:-
 
-    InternalADC.rate9k()    // Equal to speed1x().
+    InternalADC.rate9k()    // Equal to speed1x(), default.
     InternalADC.rate18k()   // speed2x().
     InternalADC.rate37k()   // speed4x().
-    InternalADC.rate74k()   // Usually gives poor results.
+    InternalADC.rate74k()   // Usually gives inaccurate results.
 
     InternalADC.rate4k()    // 4k only usable with 1MHz breadboard arduinos
                             // possibly poor results.
 
+Internally, the ADC divides down the master clock frequency (16 MHz for an Uno). Only a limited choice of division settings is available.
 
-Set the ADC's maximum sample rate (reading rate), the rate at which it takes readings in free-running mode. According to Nick Gammon's experiments (see References), rates up to 37000 samples/second (37k) do not affect accuracy or precision very much, at least with signal sources within specification (under 10 kohm source impedance).
-
-At 74k, accuracy is compromised, although you might get lucky with your chip.
-
-The number of settable rates is small. Internally, the ADC uses a fraction of the master clock frequency (16 MHz for an Uno) to control taking readings. Only a limited number of these fractions are available.
-
-To take readings at other, slower rates (down to once per month?), see `triggerOnInterrupt0()`, `triggerOnTimer1CompareB()`, and `triggerOnInputCapture()` below.
+To take readings at other, slower rates (down to once per month?), see `triggerOnInterrupt0()`, `triggerOnTimer1CompareB()`, and `triggerOnInputCapture()`.
 
 
 ## TRIGGERING (STARTING)
 
     InternalADC.singleReadingMode() [default]
+
+Tthe ADC starts taking one reading after `startReading()`- see below. The `read()` functions (below) do `startReading()` internally to take a single reading.
+
     InternalADC.freeRunningMode()
 
-
-    InternalADC.triggerOnInterrupt0()
-    InternalADC.triggerOnInputCapture()
-    InternalADC.triggerOnTimer1CompareB()
-    InternalADC.triggerOnTimer1Overflow()
-
-### Single Reading Mode and Free-Running Mode
-
-`singleReadingMode()` in **single-reading mode**, the ADC starts taking one sample (reading) after you do `startReading()` (see below under "non-blocking reads"). The `read()` functions (below) do `startReading()` internally to take a single reading.
-
-`freeRunningMode()` in **free-running mode**, the ADC starts taking the next sample as soon as it has finished the previous one. So after doing `startSample()` once, you can just read values with `getLastReading()` or `getLastReading8Bit()` when desired.
-
-To go back to single reading mode use `singleReadingMode()`, or use `end()` to stop the ADC entirely.
+`startReading()` starts the first reading, and then the ADC runs continously starting the next as soon as the last is ready.
 
 
 ### Event-Based Triggering / Initiation
 
+
     InternalADC.triggerOnInterrupt0()
 
-Start a sample when the INTF0 flag bit in the EIFR
-register is first set by a change on pin 2, after attachInterrupt(0).
-
-For example, the PPS (pulse per second) output from a GPS module could be used with `triggerOnInterrupt0()` to take one sample every second. Or the 32 kHz output from a DS3232 RTC module could be used instead, to take a sample at 32,768 samples per second, or fractions of this (16384, 8192, .., 8, 4, 2, 1).
+Start a sample when the INTF0 flag bit in the EIFR register is first set by a change on pin 2, after attachInterrupt(0).
 
 
     InternalADC.triggerOnInputCapture()
 
-Start taking a sample when an input capture interrupt occurs due to a rising or falling voltage on pin 8 after Timer 1's Input Capture unit has been configured. (Advanced: no functionality in the base Arduino system.)
-
-`triggerOnInterrupt0()` and `triggerOnInputCapture()` also allow random event based sampling, taking a reading whenever a particular event occurs on pins D2 or D8.
+Start taking a sample when an input capture event occurs. (Advanced: no functionality in the base Arduino system.)
 
 
     InternalADC.triggerOnTimer1CompareB(), triggerOnTimer1Overflow()
 
-You can configure Timer1 to count at various rates and use these modes to take regular samples. (Advanced: no functionality in the base Arduino system.)
-
+You can configure Timer1 to count at various rates and use these modes to take regular readings. (Advanced: no functionality in the base Arduino system.)
 
 
 
 ## SOURCE: INPUT SELECTION
 
+
     InternalADC.usePin(pin)
     InternalADC.freePin(pin)
 
-`usePin()` connects the ADC's input to the specified pin ready to take samples. It also disconnects the AVR's digital circuitry from the pin to reduce power consumption and possible electrical "noise" while taking readings, as recommended by AVR/Microchip in the data sheet for the ATmega328P.
 
-Arduino's `digitalRead()` and `digitalWrite()` will not work on the pin selected with `usePin()`.
+`usePin()` connects the ADC's input to the specified pin ready to take samples. It also disconnects the AVR's digital input circuitry from the pin as recommended in the data sheet. `digitalRead()` and `digitalWrite()` will not work on the selected pin.
 
-Pin must be one of the analog pins on an Arduino, A0 .. A7. (The Uno does not have A6 or A7.)
+Pin must be one of the analog pins A0 .. A7. (The Uno does not have A6 or A7.)
 
-`freePin()` reconnects the used pin's digital circutry, allowing
-`digitalRead()` and `digitalWrite()` to work, and sets the ADC's input to its internal ground connection, so no pin is used by the InternalADC.
-
+`freePin()` reconnects the pin's digital circutry, allowing
+`digitalRead()` and `digitalWrite()` to work, and sets the ADC's input to its internal ground connection.
 
 Internally-used functions:-
 
@@ -301,11 +260,8 @@ Internally-used functions:-
     InternalADC.disconnectAllDigitalInputs()
     InternalADC.reconnectAllDigitalInputs()
 
-Disconnect / reconnect the digital input circuitry for an analog pin or all six* of them, for lower power consumption with voltages around half of supply voltage. These may be useful separately from `usePin()` and `freePin()`.
 
-NOTE: A4 and A5 are used digitally for Wire (the built-in I2C peripheral).
-
-\* A6 and A7, which exist on Nanos and Pro Minis, don't have digital circuitry.
+NOTE: A4 and A5 are used digitally for Wire (the built-in I2C peripheral). A6 and A7, which exist on Nanos and Pro Minis, don't have digital circuitry.
 
 
 
