@@ -1,16 +1,23 @@
 ## Analog Control Panel Examples
 
+
+## Calibrate ADC
+
+TODO.  Calibration is necessary for numbers that match your multimeter.
+
 ### Read LDR
 
-TODO Basic example, reading the voltage at the junction of an LDR and ordinary resistor to estimate light level.
+Basic example, reading the voltage at the junction of an LDR and ordinary resistor to estimate light level.
+
+The example also demonstrates pin powering: powering sensors only when you want to read them. This saves batteries and also reduces internal self-heating which is useful for temperature sensors or sensors than are prone to "drift" after a while.
 
 ### Read Battery
 
-TODO Shows the `getSupplyVoltage()` and `setInternalReference()` functions. The latter allows you to correct the voltage reported by `getSupplyVoltage()`, and all the other readings you do using the internal reference.
+Shows the `getSupplyVoltage()` and `setInternalReference()` functions. The latter allows you to correct the voltage reported by `getSupplyVoltage()`, and all the other readings you do using the internal reference.
 
 ### Measure Internal Reference
 
-TODO Puts the internal reference voltage on the "AREF" pin so you can measure it with a multi-meter.
+Puts the internal reference voltage on the "AREF" pin so you can measure it with a multi-meter.
 
 ### Measure Capacitor
 
@@ -18,11 +25,11 @@ TODO Uses the R-C time constant formula with a known resistance to estimate the 
 
 ### Multi Button Pin
 
-TODO shows how to use one analog input pin to detect which of five buttons was pressed. The example requires five resistors and five button switches as shown in the Readme for MultiButtonPin. The technique can be adapted for fewer buttons and maybe one more than five.
+Shows how to use one analog input pin to detect which of five buttons was pressed. The example requires five resistors and five button switches as shown in the Readme for MultiButtonPin. The technique can be adapted for fewer buttons and maybe one more than five.
 
 ### Bit Depth 12
 
-TODO Demonstrates a technique called "oversampling and decimation" to get more precision out of the 10 bit ADC in AVR chips. It's not easy and there is no free lunch, though. Extra hardware needed.
+Demonstrates a technique called "oversampling and decimation" to get more precision out of the 10 bit ADC in AVR chips. It's not easy and there is no free lunch, though. Extra hardware needed to provide a noise source - the example uses the tone() function and an R-C attentuator/filter as a sawtooth wave generator.
 
 ### Test Reading Scatter
 
@@ -52,7 +59,3 @@ Sample output (sleepR is sleepRead(), freerun is freeRunningMode with getLastRea
     sleepR           38      24       1
     freerun          31      27       8
 
-
-## Calibrate ADC
-
-TODO.

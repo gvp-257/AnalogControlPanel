@@ -559,7 +559,10 @@ float _M328P_ADC::getSupplyVoltage()
     uint8_t oldADCSRA = ADCSRA, oldADMUX = ADMUX;
     referenceDefault();
     singleReadingMode();
-    int rdg = readInternalReference();
+    int rdg = 0;
+    for (short i = 0; i < 4; i++) {rdg = readInternalReference();}
+    rdg = (rdg + 2 / 4);   // rounded average of four readings.
+
     ADMUX = oldADMUX; ADCSRA = oldADCSRA;
     if (rdg == 0) return 0;
     return (bandgapV * 1023.0 / (float)rdg);

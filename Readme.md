@@ -101,7 +101,7 @@ All functions belong to **InternalADC**, i.e. must be prefixed with `InternalADC
   * **Source** Input Pin selection that is decoupled from taking readings: `usePin(pin)`, `freePin(pin)`. After `usePin()`, the ADC will continue to take readings from that pin. After `freePin()` you can use the pin for digital input or output.
 
   * **Scale**: set full-scale (reference) voltage input, equal to a reading of 1024, if the ADC could output a number bigger than 1023 in 10-bit mode.  `referenceDefault()`: the ATmega's supply. `referenceDefault()` can vary quite a bit, especially on batteries, and can be 'noisy' when powered by USB.
-  * `referenceExternal()`. For example, to use a TL431, LM35, or LM4040 voltage reference chip.
+  * `referenceExternal()`. For example, to use a TL431, LM385Z, or LM4040 voltage reference chip.
   *  `referenceInternal()`: The chips internal reference, 1.1V. The ATmega turns off its internal reference when not in use, so after selecting
 it, wait 70 microseconds for it to stabilise. Or do other things taking that
 long, like reading a real-time clock module over I2C.
@@ -147,6 +147,25 @@ Is the ADC enabled and is its clock running?
 
 Start and stop the InternalADC. Stopping it reduces current consumption by about 300 microamps while the processor is awake.
 
+`begin()` is equivalent to
+
+    powerOn();
+    singleReadingMode();
+    bitDepth10();
+    speed1x();
+    referenceDefault();
+    noInterruptOnADCDone();
+    detachDoneInterruptFunction();
+
+`begin()` also sets the ADC's internal input connection to internal ground - no pin is selected.
+
+`end()` is equivalent to
+
+    reconnectAllDigitalInputs();    // enable digitalRead() on analog pins
+    powerOff();
+
+
+### Saving and Restoring state:-
 
     InternalADCSettings adcsettings = InternalADC.saveSettings();
     InternalADC.restoreSettings(adcsettings)
@@ -309,7 +328,7 @@ is finished. (27ish microseconds if speed4x() is used before `read()`, 110-ish m
 
     int InternalADC.analogRead(const uint8_t pin)
 
-This corresponds to Arduino's analogRead(pin) function.
+This corresponds to Arduino's analogRead(pin) function. `analogRead()` will issue `begin()` if the ADC is powered off or disabled, so using `begin()` beforehand is optional.
 
 
     int InternalADC.read()
@@ -318,6 +337,7 @@ You must do `usePin(pin)` beforehand. Repeated `read()`s continue to use the sam
 
 * After `bitDepth8()`,  returns 0..255.
 * After `bitDepth10()`, returns 0..1023.
+
 
 
     uint16_t InternalADC.sleepRead()
