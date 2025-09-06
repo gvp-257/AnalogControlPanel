@@ -1,9 +1,11 @@
 ## Analog Control Panel Examples
 
 
-## Calibrate ADC
+## Median Filter
 
-TODO.  Calibration is necessary for numbers that match your multimeter.
+The median filter is a low computation way to remove "spikes" from your data,
+in the normal case that it is changing smoothly, but is occasionally subject
+to wild readings caused by electrical interference or bad connections.
 
 ### Read LDR
 
